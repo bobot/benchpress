@@ -807,9 +807,7 @@ let mk_file_summary filename (m : Test_metadata.t) : Html.elt list =
     span
       [ A.class_ "col-md-3 text-secondary" ]
       [
-        txt
-        @@ CCOpt.map_or ~default:"<unknown date>" Misc.human_datetime
-             m.timestamp;
+        txt (Filename.remove_extension filename)
       ]
   and dirs =
     if CCList.is_empty m.dirs then
