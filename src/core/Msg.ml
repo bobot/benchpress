@@ -3,7 +3,7 @@ type master_msg =
   | Stop_worker
 
 type worker_msg =
-  | Worker_response of int * Run_event.t list
+  | Worker_response of {id: int; events: Run_event.t list; partial: bool }
   | Worker_failure of int * exn
 
 type th_msg = Work_done

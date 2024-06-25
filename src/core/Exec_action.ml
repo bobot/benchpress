@@ -520,13 +520,13 @@ end = struct
       try
         while true do
           match Marshal.from_channel ic with
-          | Msg.Worker_response (id, evl) ->
+          | Msg.Worker_response {id; events=evl; partial} ->
             Log.debug (fun k ->
                 k "(@[server_loop@ : Worker %d sent %d responses.@])" id
                   (List.length evl));
             if evl <> [] then add_resps evl;
             let tasks = get_tasks ntasks in
-            if tasks = [] then (
+            if not partial && tasks = [] then (
               Marshal.to_channel oc Msg.Stop_worker [];
               flush oc;
               Log.debug (fun k ->
@@ -567,7 +567,7 @@ end = struct
           close_out oc
         )
       | e ->
-        Log.err (fun k -> k "(@[server_loop@ : Worker failed!@])");
+        Log.err (fun k -> k "(@[server_loop@ : Worker failed: %s!@])" (Printexc.to_string e));
         close_out oc;
         decr_nb_workers ();
         raise e

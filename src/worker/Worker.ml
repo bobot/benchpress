@@ -96,27 +96,23 @@ let run_worker ?timeout ?memory (defs : Definitions.t) id socket_addr
   Log.debug (fun k -> k "(@[run_worker %d: started loop@])" id);
   try
     Log.debug (fun k -> k "(@[run_worker %d: sent initial message@])" id);
-    Marshal.to_channel oc (Msg.Worker_response (id, [])) [];
-    flush oc;
-    while true do
+    let done_jobs_new_jobs ~partial events =
+      let events = List.flatten events in
+      Log.debug (fun k ->
+          k "(@[run_worker %d: sent %d responses@])" id (List.length events));
+      Marshal.to_channel oc (Msg.Worker_response { id; events; partial }) [];
+      flush oc;
       match Marshal.from_channel ic with
       | Msg.Worker_task cmds ->
         Log.debug (fun k ->
             k "(@[run_worker %d: received %d tasks@])" id (List.length cmds));
-        let reps =
-          List.flatten
-          @@ Misc.Par_map.map_p ~j
-               (fun (prover, pb) ->
-                 run_prover_pb ?proof_dir:None ~limits ~prover ~pb provers
-                   checkers)
-               cmds
-        in
-        Log.debug (fun k ->
-            k "(@[run_worker %d: sent %d responses@])" id (List.length reps));
-        Marshal.to_channel oc (Msg.Worker_response (id, reps)) [];
-        flush oc
+        cmds
       | Msg.Stop_worker -> raise Exit
-    done
+    in
+    Misc.Dyn_par_map.map_p ~j
+      ~f:(fun (prover, pb) ->
+        run_prover_pb ?proof_dir:None ~limits ~prover ~pb provers checkers)
+      ~done_jobs_new_jobs
   with
   | Exit ->
     Log.debug (fun k ->

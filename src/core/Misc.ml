@@ -165,11 +165,11 @@ let human_duration (f : float) : string =
     print_aux "d" n_day ^ print_aux "h" n_hour ^ print_aux "m" n_min
     ^ string_of_int n
     ^ (if f -. floor f >= 0.1 then (
-        let s = Printf.sprintf "%.1f" (f -. floor f) in
-        "." ^ snd @@ CCString.Split.left_exn ~by:"." s
-        (* remove the leading "0." *)
-      ) else
-        "")
+         let s = Printf.sprintf "%.1f" (f -. floor f) in
+         "." ^ snd @@ CCString.Split.left_exn ~by:"." s
+         (* remove the leading "0." *)
+       ) else
+         "")
     ^ "s"
   ) else
     Printf.sprintf "%.3fs" f
@@ -345,6 +345,59 @@ module Par_map = struct
       Logs.debug (fun m -> m "par-map: stop pool");
       P.stop ();
       res
+end
+
+module Dyn_par_map = struct
+  (* Create a pool of [j] parallel threads, and allows to add new tasks *)
+  let map_p ~j ~f ~done_jobs_new_jobs =
+    if j < 1 then invalid_arg "map_p: ~j";
+    die_on_sigterm ();
+    (* NOTE: for some reason the pool seems to spawn one too many thread
+       in some cases. So we add a guard to respect [-j] properly. *)
+    let sem = CCSemaphore.create j in
+    Logs.debug (fun k -> k "par-map: create pool j=%d" j);
+    let module P = CCPool.Make (struct
+      let max_size = j
+    end) in
+    let mutex = Mutex.create () in
+    let condition = Condition.create () in
+    let results = Queue.create () in
+    let remaining_jobs_to_start = ref 0 in
+    let remaining_jobs_to_finish = ref 0 in
+    let rec add_jobs_if_needed () =
+      if !remaining_jobs_to_start = 0 then (
+        let jobs =
+          done_jobs_new_jobs
+            ~partial:(!remaining_jobs_to_finish <> 0)
+            (List.of_seq @@ Queue.to_seq results)
+        in
+        Queue.clear results;
+        let nb_jobs = List.length jobs in
+        remaining_jobs_to_start := !remaining_jobs_to_start + nb_jobs;
+        remaining_jobs_to_finish := !remaining_jobs_to_finish + nb_jobs;
+        List.iter (P.run1 run) jobs
+      )
+    and run x =
+      Mutex.lock mutex;
+      assert (!remaining_jobs_to_start > 0);
+      decr remaining_jobs_to_start;
+      Mutex.unlock mutex;
+      let r = CCSemaphore.with_acquire ~n:1 sem ~f:(fun () -> f x) in
+      Fun.protect
+        ~finally:(fun () -> Mutex.unlock mutex)
+        (fun () ->
+          Mutex.lock mutex;
+          Queue.add r results;
+          assert (!remaining_jobs_to_finish > 0);
+          decr remaining_jobs_to_finish;
+          add_jobs_if_needed ();
+          if !remaining_jobs_to_finish = 0 then Condition.signal condition)
+    in
+    Mutex.lock mutex;
+    add_jobs_if_needed ();
+    if !remaining_jobs_to_finish <> 0 then Condition.wait condition mutex;
+    Logs.debug (fun k -> k "par-map: stop pool");
+    P.stop ()
 end
 
 module Git = struct
