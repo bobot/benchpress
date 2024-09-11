@@ -106,13 +106,14 @@ let run_worker ?timeout ?memory (defs : Definitions.t) id socket_addr
       | Msg.Worker_task cmds ->
         Log.debug (fun k ->
             k "(@[run_worker %d: received %d tasks@])" id (List.length cmds));
-        cmds
-      | Msg.Stop_worker -> raise Exit
+        Some cmds
+      | Msg.Stop_worker -> None
     in
     Misc.Dyn_par_map.map_p ~j
       ~f:(fun (prover, pb) ->
         run_prover_pb ?proof_dir:None ~limits ~prover ~pb provers checkers)
-      ~done_jobs_new_jobs
+      ~done_jobs_new_jobs;
+    raise Exit
   with
   | Exit ->
     Log.debug (fun k ->

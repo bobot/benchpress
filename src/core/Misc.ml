@@ -366,16 +366,18 @@ module Dyn_par_map = struct
     let remaining_jobs_to_finish = ref 0 in
     let rec add_jobs_if_needed () =
       if !remaining_jobs_to_start = 0 then (
-        let jobs =
-          done_jobs_new_jobs
-            ~partial:(!remaining_jobs_to_finish <> 0)
-            (List.of_seq @@ Queue.to_seq results)
-        in
+        let res = List.of_seq @@ Queue.to_seq results in
+        let partial = !remaining_jobs_to_finish <> 0 in
         Queue.clear results;
-        let nb_jobs = List.length jobs in
-        remaining_jobs_to_start := !remaining_jobs_to_start + nb_jobs;
-        remaining_jobs_to_finish := !remaining_jobs_to_finish + nb_jobs;
-        List.iter (P.run1 run) jobs
+        match done_jobs_new_jobs ~partial res with
+        | Some jobs ->
+          let nb_jobs = List.length jobs in
+          remaining_jobs_to_start := !remaining_jobs_to_start + nb_jobs;
+          remaining_jobs_to_finish := !remaining_jobs_to_finish + nb_jobs;
+          List.iter (P.run1 run) jobs
+        | None ->
+          assert (not partial);
+          Condition.signal condition
       )
     and run x =
       Mutex.lock mutex;
@@ -390,13 +392,13 @@ module Dyn_par_map = struct
           Queue.add r results;
           assert (!remaining_jobs_to_finish > 0);
           decr remaining_jobs_to_finish;
-          add_jobs_if_needed ();
-          if !remaining_jobs_to_finish = 0 then Condition.signal condition)
+          add_jobs_if_needed ())
     in
     Mutex.lock mutex;
     add_jobs_if_needed ();
     if !remaining_jobs_to_finish <> 0 then Condition.wait condition mutex;
     Logs.debug (fun k -> k "par-map: stop pool");
+    Mutex.unlock mutex;
     P.stop ()
 end
 
