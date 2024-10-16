@@ -365,7 +365,7 @@ module Dyn_par_map = struct
     let remaining_jobs_to_start = ref 0 in
     let remaining_jobs_to_finish = ref 0 in
     let rec add_jobs_if_needed () =
-      if !remaining_jobs_to_start = 0 then (
+      if !remaining_jobs_to_finish < j then (
         let res = List.of_seq @@ Queue.to_seq results in
         let partial = !remaining_jobs_to_finish <> 0 in
         Queue.clear results;
@@ -374,7 +374,8 @@ module Dyn_par_map = struct
           let nb_jobs = List.length jobs in
           remaining_jobs_to_start := !remaining_jobs_to_start + nb_jobs;
           remaining_jobs_to_finish := !remaining_jobs_to_finish + nb_jobs;
-          List.iter (P.run1 run) jobs
+          List.iter (P.run1 run) jobs;
+          if nb_jobs > 0 then add_jobs_if_needed ()
         | None ->
           assert (not partial);
           Condition.signal condition
