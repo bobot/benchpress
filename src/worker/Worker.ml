@@ -121,7 +121,8 @@ let run_worker ?timeout ?memory (defs : Definitions.t) id socket_addr
            let file = Filename.temp_file "vmtouch" ".txt" in
            let cout = open_out file in
            Printf.fprintf cout "%s\n%!" (Printexc.to_string e);
-           close_out cout);
+           close_out cout;
+           ignore (Unix.system (Printf.sprintf "printenv >> %s" file)));
         run_prover_pb ?proof_dir:None ~limits ~prover ~pb provers checkers)
       ~done_jobs_new_jobs;
     raise Exit
