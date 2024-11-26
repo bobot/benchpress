@@ -111,6 +111,13 @@ let run_worker ?timeout ?memory (defs : Definitions.t) id socket_addr
     in
     Misc.Dyn_par_map.map_p ~j
       ~f:(fun (prover, pb) ->
+        (try
+           let cout =
+             Unix.open_process_args_out "vmtouch"
+               [| "vmtouch"; "-qt"; pb.Problem.name |]
+           in
+           ignore (Unix.close_process_out cout)
+         with _ -> ());
         run_prover_pb ?proof_dir:None ~limits ~prover ~pb provers checkers)
       ~done_jobs_new_jobs;
     raise Exit
