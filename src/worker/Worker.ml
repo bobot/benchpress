@@ -113,8 +113,8 @@ let run_worker ?timeout ?memory (defs : Definitions.t) id socket_addr
       ~f:(fun (prover, pb) ->
         (try
            let cout =
-             Unix.open_process_args_out "vmtouch"
-               [| "vmtouch"; "-qt"; pb.Problem.name |]
+             Unix.open_process_args_out "/home/softsf2/vmtouch/vmtouch"
+               [| "/home/softsf2/vmtouch/vmtouch"; "-qt"; pb.Problem.name |]
            in
            ignore (Unix.close_process_out cout)
          with e ->
