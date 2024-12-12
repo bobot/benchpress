@@ -148,6 +148,9 @@ let main ?j ?cpus ?pp_results ?dyn ?timeout ?memory ?csv ?(provers = []) ?meta:_
               {
                 r.slurm with
                 nodes = CCOpt.value ~default:r.slurm.nodes slurm.nodes;
+                partition = CCOpt.(slurm.partition <+> r.slurm.partition);
+                additional_options =
+                  r.slurm.additional_options @ slurm.additional_options;
               };
             j = CCOpt.( <+> ) j r.j;
             limits =
