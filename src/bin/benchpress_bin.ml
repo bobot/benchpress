@@ -187,10 +187,11 @@ module Slurm = struct
         else
           None
       in
+      let slurm = { Stanza.partition; additional_options; nodes; addr; port } in
       Run_main.main ~sbatch:true ~pp_results ?dyn ~j ?timeout ?memory ?csv
         ~provers ~meta ?task ?summary ~dir_files ?proof_dir ?output ~wal_mode
-        ~desktop_notification ~no_failure ~update ~save ?partition
-        ~additional_options ?nodes ?addr ?port ?ntasks defs paths ()
+        ~desktop_notification ~no_failure ~update ~save ~slurm ?ntasks defs
+        paths ()
     in
     let defs = Bin_utils.definitions_term
     and doc =

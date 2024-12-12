@@ -25,8 +25,8 @@ let scancel job_id = Format.sprintf "scancel %d" job_id
 (** [mk_sbatch_cmds limits proof_dir j addr port partition config_file nodes]
     creates a list of [n] sbatch commands parametrized with the provided
     options. *)
-let mk_sbatch_cmds limits proof_dir j addr port partition additional_options
-    config_file n =
+let mk_sbatch_cmds limits proof_dir j (slurm : Action.slurm_info) used_port
+    config_file =
   let acc_aux opt v cond f acc =
     if cond v then
       (opt, f v) :: acc
@@ -54,8 +54,8 @@ let mk_sbatch_cmds limits proof_dir j addr port partition additional_options
              | _ -> false)
            (fun i -> Some (string_of_int i))
       @@ [
-           "-a", Some (Unix.string_of_inet_addr addr);
-           "-p", Some port;
+           "-a", Some (Unix.string_of_inet_addr slurm.addr);
+           "-p", Some used_port;
            "-c", Some config_file;
          ]
     in
@@ -64,10 +64,10 @@ let mk_sbatch_cmds limits proof_dir j addr port partition additional_options
       Misc.mk_shell_cmd ~options worker_exec ^ " >> tmp.txt"
   in
   let options =
-    acc_aux "--partition" partition Option.is_some Fun.id
+    acc_aux "--partition" slurm.partition Option.is_some Fun.id
     @@ [ "--nodes", Some "1"; "--exclusive", None; "--mem", Some "0" ]
-    @ List.map (fun x -> x, None) additional_options
+    @ List.map (fun x -> x, None) slurm.additional_options
   in
   let wrap = true in
-  List.init n (fun id ->
+  List.init slurm.nodes (fun id ->
       grep_job_id (sbatch (worker_cmd (id + 1)) ~options ~wrap))

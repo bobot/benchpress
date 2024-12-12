@@ -68,11 +68,7 @@ val mk_run_provers_slurm_submission :
   ?pattern:path ->
   provers:path list ->
   ?loc:Loc.t ->
-  ?partition:path ->
-  ?additional_options:string list ->
-  ?nodes:int ->
-  ?addr:Unix.inet_addr ->
-  ?port:int ->
+  slurm:Stanza.slurm_info ->
   ?ntasks:int ->
   t ->
   Action.run_provers_slurm_submission

@@ -218,8 +218,8 @@ let mk_run_provers ?j ?timeout ?memory ?stack ?pattern ~paths ~provers ~loc
   Action.{ j; limits; dirs; provers; pattern; loc }
 
 let mk_run_provers_slurm_submission ?j ~paths ?timeout ?memory ?stack ?pattern
-    ~provers ?loc ?partition ?(additional_options = []) ?nodes ?addr ?port
-    ?ntasks (self : t) : Action.run_provers_slurm_submission =
+    ~provers ?loc ~slurm ?ntasks (self : t) :
+    Action.run_provers_slurm_submission =
   let ge_val opt min def =
     match opt with
     | Some v when v >= min -> v
@@ -228,29 +228,25 @@ let mk_run_provers_slurm_submission ?j ~paths ?timeout ?memory ?stack ?pattern
   let provers = CCList.map (find_prover' self) provers in
   let dirs = CCList.map (mk_subdir self) paths in
   let limits = mk_limits ?timeout ?memory ?stack () in
-  let nodes = ge_val nodes 1 1 in
-  let addr = CCOpt.value addr ~default:(Misc.localhost_addr ()) in
-  let port = ge_val port 0 0 in
+  let nodes = ge_val slurm.Stanza.nodes 1 1 in
+  let addr = CCOpt.value slurm.addr ~default:(Misc.localhost_addr ()) in
+  let port = ge_val slurm.port 0 0 in
+  let slurm =
+    {
+      Action.addr;
+      port;
+      nodes;
+      partition = slurm.partition;
+      additional_options = slurm.additional_options;
+    }
+  in
   let j =
     match j with
     | Some v when v > 0 -> j
     | _ -> None
   in
   let ntasks = ge_val ntasks 1 10 in
-  {
-    partition;
-    additional_options;
-    nodes;
-    j;
-    addr;
-    port;
-    ntasks;
-    provers;
-    dirs;
-    pattern;
-    limits;
-    loc;
-  }
+  { slurm; j; ntasks; provers; dirs; pattern; limits; loc }
 
 let rec mk_action (self : t) (a : Stanza.action) : _ =
   match a with
@@ -272,17 +268,14 @@ let rec mk_action (self : t) (a : Stanza.action) : _ =
         stack;
         pattern;
         j;
-        partition;
-        nodes;
-        addr;
-        port;
+        slurm;
         ntasks;
         loc;
       } ->
     let paths = mk_paths ~dir_files dirs in
     let a =
       mk_run_provers_slurm_submission ?j ?timeout ?memory ?stack ?pattern ~loc
-        ~paths ~provers ?partition ?nodes ?addr ?port ?ntasks self
+        ~paths ~provers ~slurm ?ntasks self
     in
     Action.Act_run_slurm_submission a
   | Stanza.A_progn l ->

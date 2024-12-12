@@ -14,7 +14,7 @@ type run_provers = {
   loc: Loc.t option;
 }
 
-type run_provers_slurm_submission = {
+type slurm_info = {
   partition: string option;
   (* The partition to which the allocated nodes should belong. *)
   additional_options: string list;
@@ -25,8 +25,11 @@ type run_provers_slurm_submission = {
   addr: Unix.inet_addr;
   (* IP address of the server on the control node.
      Needs to be reachable by the workers which will run on the allocated calculation nodes. *)
-  port: int;
-  (* port of the server in the control node. *)
+  port: int; (* port of the server in the control node. *)
+}
+
+type run_provers_slurm_submission = {
+  slurm: slurm_info;
   j: int option;
   (* number of parallel threads that will be launched by the workers.
      Default is the number of processors on the node. *)
@@ -76,29 +79,14 @@ let pp_run_provers out (self : run_provers) =
 
 let pp_run_provers_slurm out (self : run_provers_slurm_submission) =
   let open Misc.Pp in
-  let {
-    partition;
-    additional_options;
-    nodes;
-    j;
-    dirs;
-    provers;
-    pattern;
-    limits;
-    addr;
-    port;
-    ntasks;
-    loc = _;
-  } =
-    self
-  in
+  let { slurm; j; dirs; provers; pattern; limits; ntasks; loc = _ } = self in
   Fmt.fprintf out "(@[<v1>run_provers.Slurm%a%a%a%a%a%a%a%a%a%a%a%a%a@])"
     (pp_opt "partition" Fmt.string)
-    partition
+    slurm.partition
     (pp_f "additional_options" (Fmt.list Fmt.string))
-    additional_options (pp_f "nodes" Fmt.int) nodes
+    slurm.additional_options (pp_f "nodes" Fmt.int) slurm.nodes
     (pp_f "addr" Misc.pp_inet_addr)
-    addr (pp_f "port" Fmt.int) port (pp_f "ntasks" Fmt.int) ntasks
+    slurm.addr (pp_f "port" Fmt.int) slurm.port (pp_f "ntasks" Fmt.int) ntasks
     (pp_opt "j" Fmt.int) j
     (pp_f "dirs" (pp_l Subdir.pp))
     dirs

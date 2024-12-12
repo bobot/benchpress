@@ -23,6 +23,21 @@ type regex = string
 
 type git_fetch = GF_fetch | GF_pull
 
+type slurm_info = {
+  partition: string option;
+  (* The partition to which the allocated nodes should belong. *)
+  additional_options: string list;
+  (* Additional options for sbatch. *)
+  nodes: int option;
+  (* the maximum number of nodes that can be allocated for the job.
+     One worker will run per node *)
+  addr: Unix.inet_addr option;
+  (* IP address of the server on the control node.
+     Needs to be reachable by the workers which will run on the allocated calculation nodes. *)
+  port: int option;
+  (* port of the server in the control node. *)
+}
+
 type action =
   | A_run_provers of {
       j: int option;
@@ -46,10 +61,7 @@ type action =
       timeout: int option;
       memory: int option;
       stack: stack_limit option;
-      partition: string option;
-      nodes: int option;
-      addr: Unix.inet_addr option;
-      port: int option;
+      slurm: slurm_info;
       ntasks: int option;
       loc: Loc.t;
     }

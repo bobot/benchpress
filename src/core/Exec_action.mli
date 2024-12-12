@@ -64,11 +64,7 @@ module Exec_run_provers : sig
     ?on_proof_check:(Test.proof_check_result -> unit) ->
     ?on_done:(Test_compact_result.t -> unit) ->
     ?interrupted:(unit -> bool) ->
-    ?partition:string ->
-      ?additional_options:string list ->
-        nodes:int ->
-    addr:Unix.inet_addr ->
-    port:int ->
+    slurm:Action.slurm_info ->
     ntasks:int ->
     ?output:string ->
     ?update:bool ->

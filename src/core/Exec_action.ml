@@ -60,11 +60,7 @@ module Exec_run_provers : sig
     ?on_proof_check:(Test.proof_check_result -> unit) ->
     ?on_done:(Test_compact_result.t -> unit) ->
     ?interrupted:(unit -> bool) ->
-    ?partition:string ->
-    ?additional_options:string list ->
-    nodes:int ->
-    addr:Unix.inet_addr ->
-    port:int ->
+    slurm:Action.slurm_info ->
     ntasks:int ->
     ?output:string ->
     ?update:bool ->
@@ -389,9 +385,9 @@ end = struct
 
   let run_sbatch_job ?(timestamp = Misc.now_s ()) ?(on_start = _nop)
       ?(on_solve = _nop) ?(on_start_proof_check = _nop) ?(on_proof_check = _nop)
-      ?(on_done = _nop) ?(interrupted = fun _ -> false) ?partition
-      ?(additional_options = []) ~nodes ~addr ~port ~ntasks ?output
-      ?(update = false) ~uuid ~save ~wal_mode (self : expanded) : _ * _ =
+      ?(on_done = _nop) ?(interrupted = fun _ -> false)
+      ~(slurm : Action.slurm_info) ~ntasks ?output ?(update = false) ~uuid ~save
+      ~wal_mode (self : expanded) : _ * _ =
     ignore on_start_proof_check;
     let j =
       match self.j with
@@ -574,16 +570,19 @@ end = struct
         raise e
     in
 
-    let sock, used_port = Misc.mk_socket (Unix.ADDR_INET (addr, port)) in
-    ignore (CCThread.spawn (fun () -> Misc.start_server nodes server_loop sock));
+    let sock, used_port =
+      Misc.mk_socket (Unix.ADDR_INET (slurm.addr, slurm.port))
+    in
+    ignore
+      (CCThread.spawn (fun () -> Misc.start_server slurm.nodes server_loop sock));
 
     Log.debug (fun k ->
         k "Spawned the thread that establishes a server listening at: %s:%s."
-          (Unix.string_of_inet_addr addr)
+          (Unix.string_of_inet_addr slurm.addr)
           used_port);
     let sbatch_cmds =
-      Slurm_cmd.mk_sbatch_cmds self.limits self.proof_dir j addr used_port
-        partition additional_options config_file nodes
+      Slurm_cmd.mk_sbatch_cmds self.limits self.proof_dir j slurm used_port
+        config_file
     in
     let job_ids =
       List.fold_left
@@ -891,19 +890,7 @@ let rec run ?output ?(save = true) ?interrupted ?cb_progress
     Format.printf "task done: %a@." Test_compact_result.pp res;
     ()
   | Act_run_slurm_submission
-      {
-        nodes;
-        j;
-        dirs;
-        provers;
-        pattern;
-        limits;
-        partition;
-        addr;
-        port;
-        ntasks;
-        _;
-      } ->
+      { j; dirs; provers; pattern; limits; slurm; ntasks; _ } ->
     let is_dyn =
       CCOpt.get_or ~default:false @@ Definitions.option_progress defs
     in
@@ -921,8 +908,7 @@ let rec run ?output ?(save = true) ?interrupted ?cb_progress
       Exec_run_provers.run_sbatch_job ~timestamp:(Misc.now_s ()) ?interrupted
         ~on_solve:progress#on_res ~on_proof_check:progress#on_proof_check_res
         ~on_done:(fun _ -> progress#on_done)
-        ?output ~save ~uuid ~wal_mode:false ?partition ~ntasks ~nodes ~addr
-        ~port r_expanded
+        ?output ~save ~uuid ~wal_mode:false ~slurm ~ntasks r_expanded
     in
     Format.printf "task done: %a@." Test_compact_result.pp res;
     ()

@@ -28,6 +28,14 @@ type regex = string
 
 type git_fetch = GF_fetch | GF_pull
 
+type slurm_info = {
+  partition: string option;
+  additional_options: string list;
+  nodes: int option;
+  addr: Unix.inet_addr option;
+  port: int option;
+}
+
 type action =
   | A_run_provers of {
       j: int option;
@@ -51,10 +59,7 @@ type action =
       timeout: int option;
       memory: int option;
       stack: stack_limit option;
-      partition: string option;
-      nodes: int option;
-      addr: Unix.inet_addr option;
-      port: int option;
+      slurm: slurm_info;
       ntasks: int option;
       loc: Loc.t;
     }
@@ -170,10 +175,7 @@ let rec pp_action out =
         stack;
         pattern;
         j;
-        partition;
-        nodes;
-        addr;
-        port;
+        slurm;
         ntasks;
         loc = _;
       } ->
@@ -190,9 +192,10 @@ let rec pp_action out =
       (pp_opt "stack" pp_stack_limit)
       stack (pp_opt "j" Fmt.int) j
       (pp_opt "partition" Fmt.string)
-      partition (pp_opt "nodes" Fmt.int) nodes
+      slurm.partition (pp_opt "nodes" Fmt.int) slurm.nodes
       (pp_opt "addr" Misc.pp_inet_addr)
-      addr (pp_opt "port" Fmt.int) port (pp_opt "ntasks" Fmt.int) ntasks
+      slurm.addr (pp_opt "port" Fmt.int) slurm.port (pp_opt "ntasks" Fmt.int)
+      ntasks
   | A_progn l -> Fmt.fprintf out "(@[progn %a@])" (pp_l pp_action) l
   | A_run_cmd { cmd = s; loc = _ } ->
     Fmt.fprintf out "(@[run_cmd %a@])" pp_regex s
@@ -429,10 +432,14 @@ let dec_action : action SD.t =
             stack;
             pattern;
             j;
-            partition;
-            nodes;
-            addr = CCOpt.map Unix.inet_addr_of_string addr_str_opt;
-            port;
+            slurm =
+              {
+                partition;
+                additional_options = [];
+                nodes;
+                addr = CCOpt.map Unix.inet_addr_of_string addr_str_opt;
+                port;
+              };
             ntasks;
             loc;
           } );
