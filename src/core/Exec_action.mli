@@ -65,7 +65,8 @@ module Exec_run_provers : sig
     ?on_done:(Test_compact_result.t -> unit) ->
     ?interrupted:(unit -> bool) ->
     ?partition:string ->
-    nodes:int ->
+      ?additional_options:string list ->
+        nodes:int ->
     addr:Unix.inet_addr ->
     port:int ->
     ntasks:int ->

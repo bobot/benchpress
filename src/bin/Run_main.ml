@@ -54,8 +54,9 @@ let execute_submit_job_action ?pp_results ?j ?timestamp ?dyn ?limits ?proof_dir
     Error.guard (Error.wrapf "running %d tests" len) @@ fun () ->
     Exec_action.Exec_run_provers.run_sbatch_job ~uuid ?timestamp
       ~interrupted:(fun () -> CCLock.get interrupted)
-      ?partition:r.partition ~nodes:r.nodes ~addr:r.addr ~port:r.port
-      ~ntasks:r.ntasks ~save ~wal_mode ~on_solve:progress#on_res
+      ?partition:r.partition ~additional_options:r.additional_options
+      ~nodes:r.nodes ~addr:r.addr ~port:r.port ~ntasks:r.ntasks ~save ~wal_mode
+      ~on_solve:progress#on_res
       ~on_start_proof_check:(fun () -> progress#on_start_proof_check)
       ~on_proof_check:progress#on_proof_check_res
       ~on_done:(fun _ -> progress#on_done)
@@ -72,7 +73,7 @@ type top_task =
 let main ?j ?cpus ?pp_results ?dyn ?timeout ?memory ?csv ?(provers = []) ?meta:_
     ?summary ?task ?(dir_files = []) ?proof_dir ?output ?(save = true)
     ?(wal_mode = false) ~desktop_notification ~no_failure ~update
-    ?(sbatch = false) ?partition ?nodes ?addr ?port ?ntasks
+    ?(sbatch = false) ?partition ?additional_options ?nodes ?addr ?port ?ntasks
     (defs : Definitions.t) paths () : unit =
   Log.info (fun k ->
       k "run-main.main for paths %a" (Misc.pp_list Misc.Pp.pp_str) paths);
@@ -106,8 +107,9 @@ let main ?j ?cpus ?pp_results ?dyn ?timeout ?memory ?csv ?(provers = []) ?meta:_
                r.limits.memory)
         in
         let r =
-          Definitions.mk_run_provers_slurm_submission ?partition ?nodes ?j ?addr
-            ?port ?ntasks ~paths ?timeout ?memory ~provers ?loc:r.loc defs
+          Definitions.mk_run_provers_slurm_submission ?partition
+            ?additional_options ?nodes ?j ?addr ?port ?ntasks ~paths ?timeout
+            ?memory ~provers ?loc:r.loc defs
         in
         let r =
           {
@@ -160,8 +162,9 @@ let main ?j ?cpus ?pp_results ?dyn ?timeout ?memory ?csv ?(provers = []) ?meta:_
       | { loc = _; view = t } -> TT_other t.action)
     | None when sbatch ->
       let r : Action.run_provers_slurm_submission =
-        Definitions.mk_run_provers_slurm_submission ?partition ?nodes ?j ?addr
-          ?port ?ntasks ~paths ?timeout ?memory ~provers defs
+        Definitions.mk_run_provers_slurm_submission ?partition
+          ?additional_options ?nodes ?j ?addr ?port ?ntasks ~paths ?timeout
+          ?memory ~provers defs
       in
       TT_run_slurm_submission (r, defs)
     | None ->

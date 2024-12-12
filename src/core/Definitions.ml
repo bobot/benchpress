@@ -218,8 +218,8 @@ let mk_run_provers ?j ?timeout ?memory ?stack ?pattern ~paths ~provers ~loc
   Action.{ j; limits; dirs; provers; pattern; loc }
 
 let mk_run_provers_slurm_submission ?j ~paths ?timeout ?memory ?stack ?pattern
-    ~provers ?loc ?partition ?nodes ?addr ?port ?ntasks (self : t) :
-    Action.run_provers_slurm_submission =
+    ~provers ?loc ?partition ?(additional_options = []) ?nodes ?addr ?port
+    ?ntasks (self : t) : Action.run_provers_slurm_submission =
   let ge_val opt min def =
     match opt with
     | Some v when v >= min -> v
@@ -239,6 +239,7 @@ let mk_run_provers_slurm_submission ?j ~paths ?timeout ?memory ?stack ?pattern
   let ntasks = ge_val ntasks 1 10 in
   {
     partition;
+    additional_options;
     nodes;
     j;
     addr;

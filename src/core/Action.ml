@@ -17,6 +17,8 @@ type run_provers = {
 type run_provers_slurm_submission = {
   partition: string option;
   (* The partition to which the allocated nodes should belong. *)
+  additional_options: string list;
+  (* Additional options for sbatch. *)
   nodes: int;
   (* the maximum number of nodes that can be allocated for the job.
      One worker will run per node *)
@@ -76,6 +78,7 @@ let pp_run_provers_slurm out (self : run_provers_slurm_submission) =
   let open Misc.Pp in
   let {
     partition;
+    additional_options;
     nodes;
     j;
     dirs;
@@ -89,9 +92,11 @@ let pp_run_provers_slurm out (self : run_provers_slurm_submission) =
   } =
     self
   in
-  Fmt.fprintf out "(@[<v1>run_provers.Slurm%a%a%a%a%a%a%a%a%a%a%a%a@])"
+  Fmt.fprintf out "(@[<v1>run_provers.Slurm%a%a%a%a%a%a%a%a%a%a%a%a%a@])"
     (pp_opt "partition" Fmt.string)
-    partition (pp_f "nodes" Fmt.int) nodes
+    partition
+    (pp_f "additional_options" (Fmt.list Fmt.string))
+    additional_options (pp_f "nodes" Fmt.int) nodes
     (pp_f "addr" Misc.pp_inet_addr)
     addr (pp_f "port" Fmt.int) port (pp_f "ntasks" Fmt.int) ntasks
     (pp_opt "j" Fmt.int) j

@@ -69,6 +69,7 @@ val mk_run_provers_slurm_submission :
   provers:path list ->
   ?loc:Loc.t ->
   ?partition:path ->
+  ?additional_options:string list ->
   ?nodes:int ->
   ?addr:Unix.inet_addr ->
   ?port:int ->

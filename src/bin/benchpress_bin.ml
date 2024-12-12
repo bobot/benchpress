@@ -176,8 +176,8 @@ module Slurm = struct
     let open Cmdliner in
     let aux j pp_results dyn paths dir_files proof_dir (log_lvl, defs) task
         timeout memory meta provers csv summary no_color output save wal_mode
-        desktop_notification no_failure update partition nodes addr port ntasks
-        =
+        desktop_notification no_failure update partition additional_options
+        nodes addr port ntasks =
       Misc.setup_logs log_lvl;
       catch_err @@ fun () ->
       if no_color then CCFormat.set_color_default false;
@@ -189,8 +189,8 @@ module Slurm = struct
       in
       Run_main.main ~sbatch:true ~pp_results ?dyn ~j ?timeout ?memory ?csv
         ~provers ~meta ?task ?summary ~dir_files ?proof_dir ?output ~wal_mode
-        ~desktop_notification ~no_failure ~update ~save ?partition ?nodes ?addr
-        ?port ?ntasks defs paths ()
+        ~desktop_notification ~no_failure ~update ~save ?partition
+        ~additional_options ?nodes ?addr ?port ?ntasks defs paths ()
     in
     let defs = Bin_utils.definitions_term
     and doc =
@@ -268,6 +268,11 @@ module Slurm = struct
         & opt (some string) None
         & info [ "partition" ]
             ~doc:"partition to which the allocated nodes should belong")
+    and additional_options =
+      Arg.(
+        value & opt_all string []
+        & info [ "additional-options" ]
+            ~doc:"additional options to give to sbatch")
     and nodes =
       Arg.(
         value
@@ -324,7 +329,7 @@ module Slurm = struct
         const aux $ j $ pp_results $ dyn $ paths $ dir_files $ proof_dir $ defs
         $ task $ timeout $ memory $ meta $ provers $ csv $ summary $ no_color
         $ output $ save $ wal_mode $ desktop_notification $ no_failure $ update
-        $ partition $ nodes $ addr $ port $ ntasks)
+        $ partition $ additional_options $ nodes $ addr $ port $ ntasks)
 end
 
 module List_files = struct
