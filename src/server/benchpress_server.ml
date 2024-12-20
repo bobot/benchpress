@@ -1171,7 +1171,7 @@ let handle_compare2 self : unit =
     let file_basename = Filename.basename file_path in
     let meta = get_meta self file_path in
     optgroup
-      [ A.label (Uuidm.to_string meta.uuid) ]
+      [ A.label file_basename ]
       (CCList.map
          (fun prover ->
            let attrs =
