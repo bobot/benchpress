@@ -1166,12 +1166,12 @@ let handle_compare2 self : unit =
     | _ -> None, None
   in
   let entries, _more = Bin_utils.list_entries self.data_dir in
-  let mk_entry ?selected _idx (file_path, _size) : Html.elt =
+  let mk_entry ?selected idx (file_path, _size) : Html.elt =
     let open Html in
     let file_basename = Filename.basename file_path in
     let meta = get_meta self file_path in
     optgroup
-      [ A.label file_basename ]
+      [ A.label (Printf.sprintf "%i - %s" idx file_basename) ]
       (CCList.map
          (fun prover ->
            let attrs =
